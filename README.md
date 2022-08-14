@@ -16,100 +16,117 @@
 <br>
 
 ## ✅ 담당 역할
-![Langauge:Java](https://img.shields.io/badge/Langauge-Java-green) ![DB:Oracle](https://img.shields.io/badge/DB-Oracle-yellow) ![API:Kakao MAP API](https://img.shields.io/badge/API-Kakao%20MAP%20API-orange) ![Server:Apachi Tomcat](https://img.shields.io/badge/API-Kakao%20MAP%20API-orange)
+![Langauge:Java](https://img.shields.io/badge/Langauge-Java-green) ![DB:Oracle](https://img.shields.io/badge/DB-Oracle-yellow) ![API:Kakao MAP API](https://img.shields.io/badge/API-Kakao%20MAP%20API-orange) ![Server:Apache Tomcat](https://img.shields.io/badge/Server-Apache%20Tomcat-blue)
+* Oracle을 활용한 테이블 구조 설계
+* SQL Query문을 통한 데이터 입출력 구현
+* Mybatis를 이용한 MVC 패턴 분리 및 웹 서비스 흐름 설계
+* JSP를 이용한 에코등급 시각화, 쿠폰 발급/신규 매장 등록 페이지 구현
+* Kakao MAP API를 이용한 지도 출력 및 입력 주소에 따른 위/경도 값 자동 매핑 기능 구현
+<br><br>
+
+## ✅ 트러블슈팅
+* 매장 리뷰 등록 후 포인트 적립 미반영<br>
+    - 커뮤니티 게시판에 이용한 매장의 영수증 인증 시 데이터베이스에는 포인트 증가 및 등급 상향 반영에는 성공하였지만 웹 페이지 상에는 처음 로그인한 상태 그대로의 포인트와 에코 등급이 출력되고 재로그인을 해야지만 반영되는 문제점이 발생하였다.
+    - 이 문제를 해결하기 위해 기존 로그인 시 생성하였던 Session을 이용자가 커뮤니티 게시판에 인증 성공함과 동시에 업데이트 시키는 방법을 통해 해결하였다.
+    - 이 문제를 해결하면서 이론적으로만 학습하였던 Cookie 혹은 Session을 활용해보면서 설계 초반부터 어떠한 데이터를 가지고 올 것인지, 어떤 테이블에 데이터를 넣어야 흐름이 자연스럽게 넘어오는지 등 데이터의 흐름을 파악하는 것이 중요하다라는 것을 배웠습니다.
+ ```jsx
+ // Session Update
+ UserVO user = (UserVO)session.getAttribute("login");
+	
+        // 방문 매장명, 영수증 및 음식 사진, 리뷰 등록
+		cvo.setId(user.getId());
+		cvo.setStoreName(storeName);
+		cvo.setFileName(fileName);
+		cvo.setReview(review);
+		
+        // 인증글 DB Insert SQL
+		int cnt = cdao.write(cvo);
+		
+		if(cnt > 0) {
+            // 게시판 인증 성공 시 포인트 증가 SQL 실행 후 에코 등급 시각화 페이지로 이동
+			udao.pointup(user.getId());
+			response.sendRedirect("GoTree");
+		} else {
+            // 인증 실패 시 게시판 글쓰기 페이지로 복귀
+			response.sendRedirect("GoWrite");
+		}
+ ```
+ <br>
+ 
+* 신규 매장 등록 시 위/경도 값 받아오기<br>
+    - 지도 상 매장의 위치를 나타내기 위해서는 해당 매장의 위/경도 값이 필요했지만 신규 매장 등록을 원하는 이용자에게 직접 본인 매장의 위/경도 값을 기재해 달라는 것은 이용자 편의성에 위배되는 것으로 판단되었다.
+    - 이 문제를 해결하기 위해 Kakao MAP API Geocoder 라이브러리를 통해 이용자가 본인 매장의 주소를 입력하면 해당 위치를 이용자가 확인한 후 주소가 다르다면 Marker를 이동하여 정확한 위/경도 값을 받아올 수 있도록 구현하였다.
+ ```jsx
+ <script>
+    var mapContainer = document.getElementById('map'), // 지도를 표시할 div 
+	mapOption = {
+			center : new kakao.maps.LatLng(35.15119034201585, 126.92515360052161), // 지도의 중심좌표
+			level : 3// 지도의 확대 레벨
+			};
+
+			// 지도를 생성합니다    
+			var map = new kakao.maps.Map(mapContainer, mapOption);
+
+			// 주소-좌표 변환 객체를 생성합니다
+			var geocoder = new kakao.maps.services.Geocoder();
+			var btn = document.getElementById('btn');
+			var address = '';
+
+		    btn.addEventListener('click',function() { address = document.getElementById('addr').value;
+				// 주소로 좌표를 검색합니다
+				geocoder.addressSearch(address,function(result, status) {
+				// 정상적으로 검색이 완료됐으면 
+				if (status === kakao.maps.services.Status.OK) {
+					var coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+					// 결과값으로 받은 위치를 마커로 표시합니다
+					var marker = new kakao.maps.Marker({
+									map : map,
+									position : coords
+							});
+
+            // 인포윈도우로 장소에 대한 설명을 표시합니다
+			var infowindow = new kakao.maps.InfoWindow({
+						content : '<div style="width:150px;text-align:center;padding:6px 0;">우리가게</div>'
+											           });
+			infowindow.open(map, marker);
+
+			// 지도의 중심을 결과값으로 받은 위치로 이동시킵니다
+			map.setCenter(coords);
+										
+			// 위도 & 경도 찾기
+			var lat = document.getElementById('lat')
+			var lng = document.getElementById('lng')
+			lat.value = result[0].y
+			lng.value = result[0].x
+					}
+				});
+			});
+    </script>
+ ```
+<br>
 
 <details>
 <summary><h2>🧾More Details</h2></summary>
 
 ## ✅ 프로젝트 기간
-2022.06.03 ~ 2022.06.18 (2주)
-
-<br>
-
-## ✅ 기술스택
-<table>
-    <tr>
-        <th>구분</th>
-        <th>내용</th>
-    </tr>
-    <tr>
-        <td>사용언어</td>
-        <td>
-            <img src="https://img.shields.io/badge/Java-007396?style=for-the-badge&logo=java&logoColor=white"/>
-            <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=HTML5&logoColor=white"/>
-            <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=CSS3&logoColor=white"/>
-            <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=JavaScript&logoColor=white"/>
-        </td>
-    </tr>
-    <tr>
-        <td>라이브러리</td>
-        <td>
-            <img src="https://img.shields.io/badge/BootStrap-7952B3?style=for-the-badge&logo=BootStrap&logoColor=white"/>
-            <img src="https://img.shields.io/badge/KakaoMap-FFCD00?style=for-the-badge&logo=Kakao&logoColor=white"/>
-        </td>
-    </tr>
-    <tr>
-        <td>개발도구</td>
-        <td>
-            <img src="https://img.shields.io/badge/Eclipse-2C2255?style=for-the-badge&logo=Eclipse&logoColor=white"/>
-        </td>
-    </tr>
-    <tr>
-        <td>서버환경</td>
-        <td>
-            <img src="https://img.shields.io/badge/Apache Tomcat-D22128?style=for-the-badge&logo=Apache Tomcat&logoColor=white"/>
-        </td>
-    </tr>
-    <tr>
-        <td>데이터베이스</td>
-        <td>
-            <img src="https://img.shields.io/badge/Oracle 11g-F80000?style=for-the-badge&logo=Oracle&logoColor=white"/>
-        </td>
-    </tr>
-    <tr>
-        <td>협업도구</td>
-        <td>
-            <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=Git&logoColor=white"/>
-            <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=GitHub&logoColor=white"/>
-        </td>
-    </tr>
-</table>
-
-
+2022.06.03 ~ 2022.06.18
 <br><br>
-
-
+    
 ## ✅ 화면 구성
 
 ### 회원가입 / 메인화면 / 사용자 튜토리얼 화면
 ![image](https://user-images.githubusercontent.com/103620466/182588812-326be119-90cb-4264-b3f1-bb7eb059888f.png)
-<br>
-<br>
+<br><br>
 
 ### 매장 보기 화면 (전체 매장 / 카테고리 선택 / 매장명 검색)
 ![image](https://user-images.githubusercontent.com/103620466/182589092-43fdf433-026b-47da-9d48-a5c5105ecdf3.png)
-<br>
-<br>
+<br><br>
 
 ### 커뮤니티 게시판 화면 / 리뷰 등록 / 리뷰 수정
 ![image](https://user-images.githubusercontent.com/103620466/182589351-00081d31-ca43-4193-9fb2-23fa1b506990.png)
-<br>
-<br>
+<br><br>
 
 ### 등급 시각화 / 리워드 화면 / 신규 매장등록 화면
 ![image](https://user-images.githubusercontent.com/103620466/182589764-d97e7c59-957b-47aa-a884-1e62ba9cd57d.png)
-<br>
-<br>
-<br>
+<br><br>
 </details>
-
-
-## ✅ 트러블슈팅
-개념: 문제 해결을 위해 문제의 원인을 논리적이고 체계적으로 찾는 일이며 제품이나 프로세스의 운영을 재개
-프로젝트 진행하는 동안 발생했던 이슈 중 가장 기억에 남았던 문제와 해결 프로세스 나열(2~5가지 정도)
-  
-* 문제1<br>
- 문제점 설명 및 해결방안
- 
-* 문제2<br>
- 문제점 설명 및 해결방안
