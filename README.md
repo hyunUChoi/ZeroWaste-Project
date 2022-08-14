@@ -115,7 +115,19 @@
 ## ✅ 프로젝트 기간
 2022.06.03 ~ 2022.06.18
 <br><br>
-    
+
+## 📌 SW유스케이스
+![스크린샷(27)](https://user-images.githubusercontent.com/103619605/182365968-09e3e196-5797-4fec-9eab-765e8925c9b8.png)
+<br><br>
+	
+## 📌 ER다이어그램
+![image](https://user-images.githubusercontent.com/103619605/182579207-e5070ca5-2cde-43d1-94f7-5414a2d56a9f.png)
+<br><br>
+	
+## 📌 시스템 아키텍처 구조
+![image](https://user-images.githubusercontent.com/103619605/182366619-1c5ad67d-7b9d-4844-bcef-00ca75498f61.png)
+<br><br>
+
 ## ✅ 화면 구성
 
 ### 회원가입 / 메인화면 / 사용자 튜토리얼 화면
